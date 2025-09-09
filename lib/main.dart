@@ -1,5 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:myapp/services/auth_service.dart';
+import 'package:myapp/services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:myapp/screens/auth/auth_wrapper.dart';
 import 'package:myapp/theme.dart';
@@ -8,16 +12,6 @@ import 'package:myapp/theme.dart';
 import 'firebase_options.dart';
 
 /// # Application Entry Point: main()
-/// This is the primary function that runs when the app starts.
-///
-/// ## Responsibilities:
-/// - **`WidgetsFlutterBinding.ensureInitialized()`**: Ensures that the Flutter framework is properly initialized before running the app, which is required for async operations before `runApp`.
-/// - **`Firebase.initializeApp()`**: Initializes the connection to the Firebase project using the auto-generated `firebase_options.dart`. This must be done before any other Firebase services are used.
-/// - **`runApp()`**: Starts the Flutter application by mounting the root widget (`MyApp`).
-///
-/// ## Connections:
-/// - It wraps the main application (`MyApp`) in a `ChangeNotifierProvider` for `ThemeProvider`, making the theme state accessible throughout the entire widget tree.
-
 void main() async {
   // Ensure Flutter bindings are initialized before calling native code.
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,51 +21,58 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Run the app, wrapped in a provider for theme management.
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => ThemeProvider(),
-      child: const MyApp(),
-    ),
-  );
+  // Initialize locale data for date formatting.
+  await initializeDateFormatting('id_ID', null);
+
+  // Initialize the notification service and request permissions.
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+  await notificationService.requestPermissions();
+
+  // Run the app, wrapped in providers for state management.
+  runApp(const MyApp());
 }
 
 /// # Root Widget: MyApp
-/// This is the root widget of the application.
-///
-/// ## Responsibilities:
-/// - Sets up the `MaterialApp`.
-/// - Listens to the `ThemeProvider` to dynamically set the light and dark themes.
-/// - Defines the `themeMode` based on the provider's state.
-/// - Sets `AuthWrapper` as the `home` widget, which will handle the logic of showing the login screen or the home screen based on the user's authentication state.
-///
-/// ## Connections:
-/// - **`ThemeProvider`**: Consumes the `ThemeProvider` to get the current theme mode and theme data.
-/// - **`AppTheme`**: Uses the `lightTheme` and `darkTheme` constants defined in `lib/theme.dart`.
-/// - **`AuthWrapper`**: Delegates the decision of which initial screen to show to the `AuthWrapper`.
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Consumer widget listens for changes in ThemeProvider.
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
-        return MaterialApp(
-          title: 'Murojaah App',
-          debugShowCheckedModeBanner: false, // Hides the debug banner
+    // Using MultiProvider to provide multiple services at the top level.
+    return MultiProvider(
+      providers: [
+        // Provider for the authentication service.
+        Provider<AuthService>(
+          create: (_) => AuthService(),
+        ),
+        // Provider for the theme management.
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (context) => ThemeProvider(),
+        ),
+        // StreamProvider to listen to authentication state changes.
+        StreamProvider<User?>(
+          create: (context) => context.read<AuthService>().authStateChanges,
+          initialData: null,
+        ),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Murojaah App',
+            debugShowCheckedModeBanner: false,
 
-          // --- Theme Configuration ---
-          theme: AppTheme.lightTheme, // Set the light theme data.
-          darkTheme: AppTheme.darkTheme, // Set the dark theme data.
-          themeMode: themeProvider.themeMode, // Control theme based on provider.
+            // --- Theme Configuration ---
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
 
-          // --- Initial Route ---
-          // The AuthWrapper will decide which screen to show first.
-          home: const AuthWrapper(),
-        );
-      },
+            // --- Initial Route ---
+            // The AuthWrapper will decide which screen to show first.
+            home: const AuthWrapper(),
+          );
+        },
+      ),
     );
   }
 }

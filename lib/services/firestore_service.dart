@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:developer' as developer;
@@ -105,6 +107,33 @@ class FirestoreService {
         stackTrace: s,
       );
       rethrow;
+    }
+  }
+  /// ## Get Random Quote
+  /// Fetches a single random quote from the 'quotes' collection.
+  ///
+  /// - **Returns**: A `Future` that completes with a `Map<String, dynamic>` containing
+  ///   the quote data (e.g., 'text' and 'source'), or `null` if an error occurs
+  ///   or no quotes are found.
+  Future<Map<String, dynamic>?> getRandomQuote() async {
+    try {
+      final querySnapshot = await _db.collection('quotes').get();
+      if (querySnapshot.docs.isEmpty) {
+        developer.log('No quotes found in the collection.', name: 'FirestoreService');
+        return null;
+      }
+
+      // Select a random document from the snapshot.
+      final randomIndex = Random().nextInt(querySnapshot.docs.length);
+      return querySnapshot.docs[randomIndex].data();
+    } catch (e, s) {
+      developer.log(
+        'Error fetching random quote',
+        name: 'FirestoreService',
+        error: e,
+        stackTrace: s,
+      );
+      return null;
     }
   }
 }
