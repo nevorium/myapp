@@ -13,7 +13,7 @@ Murojaah adalah aplikasi mobile sederhana untuk melacak murojaah (hafalan/ulanga
 
 ---
 
-## Sprint 2: Dashboard & Interactivity
+## Sprint 2: Dashboard & Interactivity (In Progress)
 
 ### 🎯 Objective:
 Mengimplementasikan fitur inti pada `HomeScreen`, termasuk dashboard kalender interaktif dan fungsionalitas checklist harian yang terhubung dengan Firestore.
@@ -56,3 +56,33 @@ Mengimplementasikan fitur inti pada `HomeScreen`, termasuk dashboard kalender in
 -   Pengguna dapat mencentang checkbox, menulis catatan, dan menyimpannya ke Firestore.
 -   Perubahan data di Firestore langsung terefleksikan di UI kalender.
 -   Aplikasi menangani kondisi loading dan error dengan baik.
+
+---
+
+## Sprint 3: Motivation & Reminders (Planned)
+
+### 🎯 Objective:
+Menambahkan fitur-fitur pendukung untuk meningkatkan engagement pengguna, yaitu kutipan motivasi dan notifikasi pengingat harian.
+
+### 1. Motivation/Quotes Feature
+-   **UI/UX:** Desain sebuah area di `HomeScreen` (misalnya, di bagian bawah) untuk menampilkan "Motivasi Hari Ini".
+-   **Data Source:** Buat sebuah koleksi `quotes` di Firestore yang berisi dokumen-dokumen dengan kutipan motivasi (misalnya, ayat Al-Quran atau hadits tentang pentingnya menjaga hafalan).
+-   **Logic:** Implementasikan sebuah service untuk mengambil satu kutipan secara acak dari Firestore setiap kali aplikasi dibuka atau setiap 24 jam, dan tampilkan di UI.
+
+### 2. Local Notifications Feature
+-   **Dependency:** Tambahkan package `flutter_local_notifications`.
+-   **Setup:** Konfigurasikan package untuk Android dan iOS sesuai dokumentasi.
+-   **UI/UX:** Buat sebuah halaman pengaturan (Settings screen) di mana pengguna dapat:
+    -   Mengaktifkan/menonaktifkan notifikasi.
+    -   Mengatur waktu spesifik untuk pengingat harian (misalnya, setiap jam 8 pagi).
+-   **Logic:**
+    -   Gunakan `flutter_local_notifications` untuk menjadwalkan notifikasi berulang setiap hari pada waktu yang telah ditentukan oleh pengguna.
+    -   Isi notifikasi berupa pesan pengingat sederhana, seperti "Jangan lupa murojaah hari ini ya!".
+    -   Pastikan notifikasi tidak dijadwalkan jika pengguna menonaktifkannya.
+
+### ✅ Success Criteria Sprint 3
+-   `HomeScreen` menampilkan kutipan motivasi yang berbeda setiap hari.
+-   Pengguna dapat mengakses halaman Pengaturan.
+-   Pengguna dapat mengaktifkan/menonaktifkan dan mengatur waktu notifikasi harian.
+-   Aplikasi mengirimkan notifikasi lokal sesuai dengan waktu yang diatur pengguna.
+-   Fitur notifikasi berfungsi dengan baik bahkan ketika aplikasi ditutup.
