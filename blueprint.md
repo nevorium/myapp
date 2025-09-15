@@ -9,80 +9,69 @@ Murojaah adalah aplikasi mobile sederhana untuk melacak murojaah (hafalan/ulanga
 ## Sprint 1: Setup & Core Features (Completed)
 
 -   **Objective:** Menyiapkan struktur proyek, mengintegrasikan Firebase Authentication (email/password), membuat struktur database di Firestore, dan membangun UI dasar dengan tema gelap/terang.
--   **Status:** ✅ **Selesai**. Aplikasi memiliki alur autentikasi yang berfungsi penuh, terhubung ke Firebase, dan memiliki struktur dasar yang solid.
+-   **Status:** ✅ **Selesai**.
 
 ---
 
-## Sprint 2: Dashboard & Interactivity (In Progress)
+## Sprint 2: Dashboard & Interactivity (Completed)
 
-### 🎯 Objective:
-Mengimplementasikan fitur inti pada `HomeScreen`, termasuk dashboard kalender interaktif dan fungsionalitas checklist harian yang terhubung dengan Firestore.
-
-### 1. Model Data Murojaah
--   Buat file `lib/models/murojaah_record.dart`.
--   Definisikan kelas `MurojaahRecord` yang merepresentasikan data murojaah harian (`date`, `completed`, `note`, `timestamp`).
--   Sertakan method `fromJson` dan `toJson` untuk konversi data dari dan ke Firestore.
-
-### 2. Update Firestore Service
--   Tambahkan method baru di `FirestoreService` untuk:
-    -   **`getMurojaahRecords(String userId)`**: Mengambil semua data murojaah seorang pengguna dalam bentuk `Stream<Map<DateTime, MurojaahRecord>>` untuk ditampilkan di kalender.
-    -   **`updateMurojaahRecord(String userId, MurojaahRecord record)`**: Membuat atau memperbarui data murojaah untuk tanggal tertentu. Ini akan digunakan oleh checklist harian.
-
-### 3. Implementasi Calendar View
--   Gunakan package `table_calendar` di `HomeScreen`.
--   Hubungkan kalender dengan data dari `FirestoreService`.
--   **Event Loader**: Tandai hari-hari di kalender yang memiliki data murojaah (`completed: true`) dengan penanda visual (misalnya, titik hijau).
--   **Styling**: Sesuaikan tampilan kalender agar cocok dengan tema aplikasi (warna header, marker, dll.).
--   Fokus pada bulan ini, dengan kemampuan navigasi ke bulan sebelumnya/berikutnya.
-
-### 4. Daily Checklist & Note Feature
--   Di bawah kalender pada `HomeScreen`, buat sebuah widget untuk hari yang dipilih.
--   Widget ini akan menampilkan:
-    -   Sebuah `Checkbox` dengan label "Sudah murojaah hari ini".
-    -   Sebuah `TextField` untuk memasukkan catatan harian (maksimal 200 karakter).
-    -   Sebuah tombol "Simpan".
--   **State Management**: Gunakan `StatefulWidget` atau `Provider` untuk mengelola state dari checklist (apakah sudah dicentang, isi catatan, dll.) secara real-time.
--   Saat tombol "Simpan" ditekan, panggil method `updateMurojaahRecord` dari `FirestoreService` untuk menyimpan data ke Firestore.
-
-### 5. Error Handling & User Feedback
--   Tampilkan `CircularProgressIndicator` saat data kalender sedang dimuat.
--   Tampilkan pesan yang jelas jika terjadi error saat mengambil atau menyimpan data.
--   Gunakan `SnackBar` untuk memberikan feedback setelah data berhasil disimpan.
-
-### ✅ Success Criteria Sprint 2
--   `HomeScreen` menampilkan kalender interaktif.
--   Hari-hari di mana pengguna sudah murojaah ditandai dengan jelas di kalender.
--   Pengguna dapat memilih tanggal di kalender untuk melihat/mengedit checklist harian.
--   Pengguna dapat mencentang checkbox, menulis catatan, dan menyimpannya ke Firestore.
--   Perubahan data di Firestore langsung terefleksikan di UI kalender.
--   Aplikasi menangani kondisi loading dan error dengan baik.
+-   **Objective:** Mengimplementasikan fitur inti pada `HomeScreen`, termasuk dashboard kalender interaktif dan fungsionalitas checklist harian.
+-   **Status:** ✅ **Selesai**.
 
 ---
 
-## Sprint 3: Motivation & Reminders (Planned)
+## Sprint 3: Motivation & Reminders (Completed)
+
+-   **Objective:** Menambahkan fitur kutipan motivasi dan notifikasi pengingat harian yang dapat diatur pengguna.
+-   **Status:** ✅ **Selesai**.
+
+---
+
+## Sprint 4: Advanced Progress Tracking (In Progress)
 
 ### 🎯 Objective:
-Menambahkan fitur-fitur pendukung untuk meningkatkan engagement pengguna, yaitu kutipan motivasi dan notifikasi pengingat harian.
+Meningkatkan `HomeScreen` dengan metrik progres yang lebih detail sesuai PRD, termasuk *streak counter*, persentase mingguan, dan *heat map* pada kalender untuk memberikan feedback visual yang lebih kaya kepada pengguna.
 
-### 1. Motivation/Quotes Feature
--   **UI/UX:** Desain sebuah area di `HomeScreen` (misalnya, di bagian bawah) untuk menampilkan "Motivasi Hari Ini".
--   **Data Source:** Buat sebuah koleksi `quotes` di Firestore yang berisi dokumen-dokumen dengan kutipan motivasi (misalnya, ayat Al-Quran atau hadits tentang pentingnya menjaga hafalan).
--   **Logic:** Implementasikan sebuah service untuk mengambil satu kutipan secara acak dari Firestore setiap kali aplikasi dibuka atau setiap 24 jam, dan tampilkan di UI.
+### 1. Streak Counter & Weekly Progress Logic
+-   **Firestore Service:** Tambahkan method baru di `FirestoreService` untuk:
+    -   `getProgressSummary(String userId)`: Sebuah method yang mengambil data murojaah sebulan terakhir dan mengkalkulasikan:
+        -   **Current Streak:** Jumlah hari beruntun murojaah (`completed: true`) hingga hari ini atau kemarin.
+        -   **Weekly Completion Rate:** Persentase hari murojaah dalam 7 hari terakhir.
+-   **Model:** Buat model data `ProgressSummary` untuk menampung hasil kalkulasi di atas.
 
-### 2. Local Notifications Feature
--   **Dependency:** Tambahkan package `flutter_local_notifications`.
--   **Setup:** Konfigurasikan package untuk Android dan iOS sesuai dokumentasi.
--   **UI/UX:** Buat sebuah halaman pengaturan (Settings screen) di mana pengguna dapat:
-    -   Mengaktifkan/menonaktifkan notifikasi.
-    -   Mengatur waktu spesifik untuk pengingat harian (misalnya, setiap jam 8 pagi).
--   **Logic:**
-    -   Gunakan `flutter_local_notifications` untuk menjadwalkan notifikasi berulang setiap hari pada waktu yang telah ditentukan oleh pengguna.
-    -   Isi notifikasi berupa pesan pengingat sederhana, seperti "Jangan lupa murojaah hari ini ya!".
-    -   Pastikan notifikasi tidak dijadwalkan jika pengguna menonaktifkannya.
+### 2. UI - Progress Summary Widget
+-   **Desain Widget:** Buat sebuah widget baru di `HomeScreen` (misalnya di atas kalender) untuk menampilkan:
+    -   Icon api (🔥) diikuti dengan angka *streak* (contoh: "🔥 7 Hari Beruntun").
+    -   Icon grafik (📊) diikuti dengan persentase mingguan (contoh: "📊 85% Minggu Ini").
+-   **State Management:** Gunakan `FutureBuilder` untuk memanggil `getProgressSummary` dan menampilkan hasilnya atau *loading indicator*.
 
-### ✅ Success Criteria Sprint 3
--   `HomeScreen` menampilkan kutipan motivasi yang berbeda setiap hari.
--   Pengguna dapat mengakses halaman Pengaturan.
--   Pengguna dapat mengaktifkan/menonaktifkan dan mengatur waktu notifikasi harian.
--   Aplikasi mengirimkan notifikasi lokal sesuai dengan waktu yang diatur pengguna.
--   Fitur notifikasi berfungsi dengan baik bahkan ketika aplikasi ditutup.
+### 3. Calendar Heat Map Enhancement
+-   **Logic:** Perbarui `eventLoader` atau `calendarBuilders` pada `TableCalendar` di `HomeScreen`.
+-   **Visuals:**
+    -   Gunakan **lingkaran hijau solid** untuk hari yang `completed: true`.
+    -   Gunakan **lingkaran merah transparan** untuk hari yang terlewat (hari setelah user mendaftar tapi tidak ada data `completed: true`).
+    -   Biarkan default untuk hari ini dan hari di masa depan.
+
+### ✅ Success Criteria Sprint 4
+-   `HomeScreen` menampilkan *streak* murojaah pengguna secara akurat.
+-   `HomeScreen` menampilkan persentase penyelesaian murojaah dalam 7 hari terakhir.
+-   Kalender di `HomeScreen` menampilkan *heat map* dengan warna hijau untuk hari selesai dan merah untuk hari terlewat.
+-   Semua data progres diperbarui setiap kali pengguna membuka aplikasi.
+
+---
+
+## Sprint 5: Prayer Time Notifications (Planned)
+
+### 🎯 Objective:
+Mengganti sistem notifikasi harian menjadi notifikasi yang terikat dengan 5 waktu sholat, sesuai dengan permintaan PRD.
+
+### 1. Prayer Time API Integration
+-   Identifikasi dan pilih API publik untuk mendapatkan jadwal sholat berdasarkan lokasi (misalnya, `aladhan.com`).
+-   Buat service baru (`PrayerTimeService`) untuk mengambil data jadwal sholat.
+
+### 2. Update Notification Service
+-   Modifikasi `NotificationService` untuk dapat menjadwalkan 5 notifikasi berbeda setiap hari sesuai jadwal dari `PrayerTimeService`.
+
+### 3. UI/UX Update
+-   Perbarui `SettingsScreen` agar pengguna dapat mengaktifkan/menonaktifkan notifikasi per waktu sholat (Subuh, Dzuhur, Ashar, Maghrib, Isya).
+-   Tambahkan fitur deteksi lokasi untuk otomatisasi pengambilan jadwal sholat.

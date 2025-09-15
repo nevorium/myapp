@@ -1,6 +1,10 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:developer' as developer;
+
+import 'package:myapp/models/progress_summary.dart';
 
 import '../models/murojaah_record.dart';
 
@@ -35,12 +39,7 @@ class FirestoreService {
   }
 
   /// ## Get Murojaah Records
-  /// Retrieves a stream of murojaah records for a given user, organized by date.
-  ///
-  /// - **`userId`**: The UID of the user whose records are to be fetched.
-  /// - **Returns**: A `Stream` of a `Map` where keys are `DateTime` (normalized to UTC midnight)
-  ///   and values are the corresponding `MurojaahRecord`. This structure is optimized
-  ///   for use with the `table_calendar` package.
+  /// Retrieves a stream of murojaah records for a given user.
   Stream<Map<DateTime, MurojaahRecord>> getMurojaahRecords(String userId) {
     try {
       final collectionRef =
@@ -51,43 +50,24 @@ class FirestoreService {
         for (var doc in snapshot.docs) {
           try {
             final record = MurojaahRecord.fromFirestore(doc);
-            // Normalize the date to UTC midnight to ensure consistent keys.
             final normalizedDate = DateTime.utc(record.date.year, record.date.month, record.date.day);
             recordsMap[normalizedDate] = record;
           } catch (e) {
-            // Log error for individual document parsing but continue processing others.
-            developer.log(
-              'Error parsing murojaah record with doc ID: ${doc.id}',
-              name: 'FirestoreService.getMurojaahRecords',
-              error: e,
-            );
+            developer.log('Error parsing murojaah record: ${doc.id}', name: 'FirestoreService', error: e);
           }
         }
         return recordsMap;
       });
     } catch (e, s) {
-       developer.log(
-        'Error fetching murojaah records stream',
-        name: 'FirestoreService',
-        error: e,
-        stackTrace: s,
-      );
-      // Return an empty stream in case of an error.
+       developer.log('Error fetching murojaah records stream', name: 'FirestoreService', error: e, stackTrace: s);
       return Stream.value({});
     }
   }
 
   /// ## Update Murojaah Record
   /// Creates or updates a murojaah record for a specific date.
-  ///
-  /// - **`userId`**: The UID of the user.
-  /// - **`record`**: The `MurojaahRecord` object containing the data to be saved.
-  ///
-  /// It uses the date part of the record as a unique identifier for the document,
-  /// ensuring that each day has only one record.
   Future<void> updateMurojaahRecord(String userId, MurojaahRecord record) async {
     try {
-      // Use a consistent, predictable ID for the document (e.g., 'YYYY-MM-DD').
       final docId =
           '${record.date.year}-${record.date.month.toString().padLeft(2, '0')}-${record.date.day.toString().padLeft(2, '0')}';
           
@@ -96,15 +76,65 @@ class FirestoreService {
           .doc(userId)
           .collection('murojaahEntries')
           .doc(docId)
-          .set(record.toFirestore(), SetOptions(merge: true)); // Use merge to avoid overwriting fields
+          .set(record.toFirestore(), SetOptions(merge: true));
     } catch (e, s) {
-      developer.log(
-        'Error updating murojaah record',
-        name: 'FirestoreService',
-        error: e,
-        stackTrace: s,
-      );
+      developer.log('Error updating murojaah record', name: 'FirestoreService', error: e, stackTrace: s);
       rethrow;
+    }
+  }
+
+  /// ## Get Progress Summary
+  /// Calculates the user's current streak and weekly completion rate.
+  Future<ProgressSummary> getProgressSummary(String userId) async {
+    try {
+      final snapshot = await _db.collection('users').doc(userId).collection('murojaahEntries').get();
+      
+      final records = snapshot.docs.map((doc) {
+        try {
+          return MurojaahRecord.fromFirestore(doc);
+        } catch (e) {
+          return null;
+        }
+      }).where((record) => record != null && record.completed).cast<MurojaahRecord>().toSet();
+
+      if (records.isEmpty) {
+        return ProgressSummary(currentStreak: 0, weeklyCompletionRate: 0.0);
+      }
+
+      final completedDates = records.map((r) => DateTime.utc(r.date.year, r.date.month, r.date.day)).toSet();
+
+      // --- Calculate Current Streak ---
+      int currentStreak = 0;
+      DateTime today = DateTime.now();
+      DateTime todayUtc = DateTime.utc(today.year, today.month, today.day);
+
+      // Check if today is completed, if not, start from yesterday
+      DateTime dateToCheck = completedDates.contains(todayUtc) ? todayUtc : todayUtc.subtract(const Duration(days: 1));
+
+      while (completedDates.contains(dateToCheck)) {
+        currentStreak++;
+        dateToCheck = dateToCheck.subtract(const Duration(days: 1));
+      }
+
+      // --- Calculate Weekly Completion Rate ---
+      int completedInLast7Days = 0;
+      for (int i = 0; i < 7; i++) {
+        final date = todayUtc.subtract(Duration(days: i));
+        if (completedDates.contains(date)) {
+          completedInLast7Days++;
+        }
+      }
+      double weeklyRate = (completedInLast7Days / 7.0) * 100;
+
+      return ProgressSummary(
+        currentStreak: currentStreak,
+        weeklyCompletionRate: weeklyRate,
+      );
+
+    } catch (e, s) {
+      developer.log('Error calculating progress summary', name: 'FirestoreService', error: e, stackTrace: s);
+      // Return a default summary in case of error
+      return ProgressSummary(currentStreak: 0, weeklyCompletionRate: 0.0);
     }
   }
 }
