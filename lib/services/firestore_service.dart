@@ -37,6 +37,23 @@ class FirestoreService {
       rethrow;
     }
   }
+  
+  /// ## Get User Creation Date
+  /// Fetches the creation timestamp of the user's profile.
+  Future<DateTime?> getUserCreationDate(String userId) async {
+    try {
+      final docSnapshot = await _db.collection('users').doc(userId).get();
+      if (docSnapshot.exists && docSnapshot.data()!.containsKey('profile')) {
+        final profile = docSnapshot.data()!['profile'] as Map<String, dynamic>;
+        final timestamp = profile['createdAt'] as Timestamp?;
+        return timestamp?.toDate();
+      }
+      return null;
+    } catch (e, s) {
+      developer.log('Error fetching user creation date', name: 'FirestoreService', error: e, stackTrace: s);
+      return null;
+    }
+  }
 
   /// ## Get Murojaah Records
   /// Retrieves a stream of murojaah records for a given user.

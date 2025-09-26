@@ -10,7 +10,7 @@ val flutterVersionName: String? by project
 android {
     namespace = "com.example.myapp"
     // Reverted compileSdk to a stable version compatible with the desugar library
-    compileSdk = 34
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -33,7 +33,7 @@ android {
         applicationId = "com.example.myapp"
         minSdk = flutter.minSdkVersion
         // The targetSdk should match the compileSdk.
-        targetSdk = 34
+        targetSdk = 36
         versionCode = flutterVersionCode?.toInt() ?: 1
         versionName = flutterVersionName ?: "1.0"
         multiDexEnabled = true
