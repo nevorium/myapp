@@ -27,51 +27,63 @@ Murojaah adalah aplikasi mobile sederhana untuk melacak murojaah (hafalan/ulanga
 
 ---
 
-## Sprint 4: Advanced Progress Tracking (In Progress)
+## Sprint 4: Advanced Progress Tracking (Completed)
 
-### 🎯 Objective:
-Meningkatkan `HomeScreen` dengan metrik progres yang lebih detail sesuai PRD, termasuk *streak counter*, persentase mingguan, dan *heat map* pada kalender untuk memberikan feedback visual yang lebih kaya kepada pengguna.
-
-### 1. Streak Counter & Weekly Progress Logic
--   **Firestore Service:** Tambahkan method baru di `FirestoreService` untuk:
-    -   `getProgressSummary(String userId)`: Sebuah method yang mengambil data murojaah sebulan terakhir dan mengkalkulasikan:
-        -   **Current Streak:** Jumlah hari beruntun murojaah (`completed: true`) hingga hari ini atau kemarin.
-        -   **Weekly Completion Rate:** Persentase hari murojaah dalam 7 hari terakhir.
--   **Model:** Buat model data `ProgressSummary` untuk menampung hasil kalkulasi di atas.
-
-### 2. UI - Progress Summary Widget
--   **Desain Widget:** Buat sebuah widget baru di `HomeScreen` (misalnya di atas kalender) untuk menampilkan:
-    -   Icon api (🔥) diikuti dengan angka *streak* (contoh: "🔥 7 Hari Beruntun").
-    -   Icon grafik (📊) diikuti dengan persentase mingguan (contoh: "📊 85% Minggu Ini").
--   **State Management:** Gunakan `FutureBuilder` untuk memanggil `getProgressSummary` dan menampilkan hasilnya atau *loading indicator*.
-
-### 3. Calendar Heat Map Enhancement
--   **Logic:** Perbarui `eventLoader` atau `calendarBuilders` pada `TableCalendar` di `HomeScreen`.
--   **Visuals:**
-    -   Gunakan **lingkaran hijau solid** untuk hari yang `completed: true`.
-    -   Gunakan **lingkaran merah transparan** untuk hari yang terlewat (hari setelah user mendaftar tapi tidak ada data `completed: true`).
-    -   Biarkan default untuk hari ini dan hari di masa depan.
-
-### ✅ Success Criteria Sprint 4
--   `HomeScreen` menampilkan *streak* murojaah pengguna secara akurat.
--   `HomeScreen` menampilkan persentase penyelesaian murojaah dalam 7 hari terakhir.
--   Kalender di `HomeScreen` menampilkan *heat map* dengan warna hijau untuk hari selesai dan merah untuk hari terlewat.
--   Semua data progres diperbarui setiap kali pengguna membuka aplikasi.
+-   **Objective:** Meningkatkan `HomeScreen` dengan metrik progres yang lebih detail (streak, persentase mingguan, heat map).
+-   **Status:** ✅ **Selesai**.
 
 ---
 
-## Sprint 5: Prayer Time Notifications (Planned)
+## Sprint 5: Prayer Time Notifications (Completed)
 
-### 🎯 Objective:
-Mengganti sistem notifikasi harian menjadi notifikasi yang terikat dengan 5 waktu sholat, sesuai dengan permintaan PRD.
+-   **Objective:** Mengganti sistem notifikasi harian menjadi notifikasi yang terikat dengan 5 waktu sholat.
+-   **Status:** ✅ **Selesai**.
 
-### 1. Prayer Time API Integration
--   Identifikasi dan pilih API publik untuk mendapatkan jadwal sholat berdasarkan lokasi (misalnya, `aladhan.com`).
--   Buat service baru (`PrayerTimeService`) untuk mengambil data jadwal sholat.
+---
 
-### 2. Update Notification Service
--   Modifikasi `NotificationService` untuk dapat menjadwalkan 5 notifikasi berbeda setiap hari sesuai jadwal dari `PrayerTimeService`.
+## Sprint 6: UI Refactor & Detailed Journaling (In Progress)
 
-### 3. UI/UX Update
--   Perbarui `SettingsScreen` agar pengguna dapat mengaktifkan/menonaktifkan notifikasi per waktu sholat (Subuh, Dzuhur, Ashar, Maghrib, Isya).
--   Tambahkan fitur deteksi lokasi untuk otomatisasi pengambilan jadwal sholat.
+-   **Objective:** Merombak struktur UI dengan `BottomNavigationBar` untuk navigasi yang lebih baik, memperkaya fitur jurnal harian dengan checklist yang lebih detail (Murojaah, Tilawah, Ziyadah, Habit Kustom), dan meningkatkan visual kalender.
+
+### 1. UI/UX Refactor & Navigation (Checklist)
+
+-   [ ] **Bottom Navigation Bar:** Implementasikan `BottomNavigationBar` dengan dua tab utama: "Dashboard" (untuk kalender dan ringkasan) dan "Jurnal" (untuk input data harian).
+-   [ ] **Main Screen:** Buat `MainScreen` sebagai *stateful widget* baru yang akan menjadi *host* untuk `BottomNavigationBar` dan mengelola halaman-halaman.
+-   [ ] **Dashboard Screen:** Ganti nama `HomeScreen` menjadi `DashboardScreen` dan pindahkan semua konten terkait kalender dan ringkasan progres ke sini.
+-   [ ] **Journal Screen:** Buat `JournalScreen` sebagai halaman baru untuk menampung semua input checklist harian.
+
+### 2. Data Model Expansion (Checklist)
+
+-   [ ] **Perbarui `MurojaahRecord`:** Modifikasi model `MurojaahRecord` di `lib/models/murojaah_record.dart` untuk menyimpan data yang lebih terstruktur dan detail. Hapus `completed` dan ganti dengan field-field baru:
+    -   `murojaahJuz: String?` (menyimpan nilai seperti "1/4 juz", "1 juz", dll.)
+    -   `tilawahSurah: String?` (menyimpan nama surah yang dipilih)
+    -   `ziyadah: bool` (true jika menambah hafalan)
+    -   `customHabits: Map<String, bool>` (menyimpan status checklist untuk habit kustom)
+    -   `note: String?` (catatan teks tetap ada, tapi terpisah).
+    -   Tambahkan *helper method* `isCompleted` yang mengembalikan `true` jika salah satu dari aktivitas di atas diisi.
+
+### 3. Feature Implementation (Checklist)
+
+-   [ ] **Calendar Theming:** Perbarui logika `TableCalendar` di `DashboardScreen` untuk memberi warna **abu-abu** pada tanggal yang terlewat (tidak ada data `MurojaahRecord`).
+-   [ ] **Pisahkan Komentar & Checklist:** Di `JournalScreen`, buat kartu terpisah untuk "Catatan" (`TextField`) dan untuk "Aktivitas Harian".
+-   [ ] **Checklist Murojaah:** Buat grup `RadioButton` atau `ChoiceChip` untuk memilih porsi murojaah: `{"1/4 juz", "1/2 juz", "1 juz", "2 juz", "3 juz"}`.
+-   [ ] **Checklist Tilawah:** Buat `DropdownButton` yang diisi dengan daftar surah dari `lib/data/quran_surahs.dart`.
+-   [ ] **Checklist Ziyadah:** Implementasikan `CheckboxListTile` sederhana untuk menandai penambahan hafalan.
+-   [ ] **Checklist Habit Kustom:**
+    -   Tampilkan daftar `CheckboxListTile` dinamis berdasarkan habit kustom yang disimpan pengguna.
+    -   Buat tombol "Tambah Habit Baru" yang akan memunculkan `AlertDialog` untuk memasukkan nama habit baru.
+
+### 4. Backend & State Management (Checklist)
+
+-   [ ] **Perbarui `FirestoreService`:** Modifikasi `updateMurojaahRecord` dan `getMurojaahRecords` untuk menangani struktur data `MurojaahRecord` yang baru.
+-   [ ] **Habit Kustom di Firestore:** Buat method baru di `FirestoreService` (`getCustomHabits`, `addCustomHabit`, `deleteCustomHabit`) untuk mengelola daftar habit kustom pengguna dalam koleksi terpisah (misalnya, `users/{userId}/custom_habits`).
+
+---
+
+### ✅ Success Criteria Sprint 6
+
+-   Aplikasi memiliki `BottomNavigationBar` yang fungsional.
+-   Pengguna dapat memasukkan data murojaah, tilawah, ziyadah, dan habit kustom secara terpisah di halaman "Jurnal".
+-   Pengguna dapat menambah dan menghapus habit kustom mereka sendiri.
+-   Kalender di "Dashboard" secara akurat menampilkan hari yang selesai (hijau), terlewat (abu-abu), dan hari ini.
+-   Semua data tersimpan dengan benar di Firestore dengan struktur yang baru.

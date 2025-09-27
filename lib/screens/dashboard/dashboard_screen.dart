@@ -1,7 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
 import 'package:myapp/models/murojaah_record.dart';
 import 'package:myapp/models/progress_summary.dart';
 import 'package:myapp/screens/settings/settings_screen.dart';
@@ -10,16 +8,17 @@ import 'package:myapp/services/firestore_service.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-/// # Home Screen
-/// This is the main screen of the application after a user logs in.
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+/// # Dashboard Screen
+/// This screen displays the user's overall progress, including the interactive
+/// calendar (heatmap), streak counter, and other statistics.
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _DashboardScreenState extends State<DashboardScreen> {
   // Services
   late final FirestoreService _firestoreService;
   late final User _currentUser;
@@ -27,76 +26,30 @@ class _HomeScreenState extends State<HomeScreen> {
   // Calendar State
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
-
-  // Daily Checklist State
-  late final TextEditingController _noteController;
-  MurojaahRecord? _selectedRecord;
 
   // Data Streams & Futures
   Stream<Map<DateTime, MurojaahRecord>>? _murojaahStream;
   Future<ProgressSummary>? _progressFuture;
   Future<DateTime?>? _userCreationDateFuture;
 
-
   @override
   void initState() {
     super.initState();
+    // Initialize services and current user from Provider.
     _firestoreService = FirestoreService();
     _currentUser = Provider.of<User>(context, listen: false);
-    _noteController = TextEditingController();
-    _selectedDay = _focusedDay;
 
-    // Initialize data streams and futures.
+    // Initialize data streams and futures required for the dashboard.
     _murojaahStream = _firestoreService.getMurojaahRecords(_currentUser.uid);
-    _progressFuture = _firestoreService.getProgressSummary(_currentUser.uid);
     _userCreationDateFuture = _firestoreService.getUserCreationDate(_currentUser.uid);
+    _progressFuture = _firestoreService.getProgressSummary(_currentUser.uid);
   }
 
-  @override
-  void dispose() {
-    _noteController.dispose();
-    super.dispose();
-  }
-
-  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-    if (!isSameDay(_selectedDay, selectedDay)) {
-      setState(() {
-        _selectedDay = selectedDay;
-        _focusedDay = focusedDay;
-      });
-    }
-  }
-
-  Future<void> _saveMurojaahRecord() async {
-    if (_selectedDay == null) return;
-
-    final recordToSave = MurojaahRecord(
-      date: _selectedDay!,
-      completed: _selectedRecord?.completed ?? true,
-      note: _noteController.text.trim(),
-      timestamp: Timestamp.now(),
-    );
-
-    try {
-      await _firestoreService.updateMurojaahRecord(_currentUser.uid, recordToSave);
-      // Refresh the progress summary after saving
-      setState(() {
-        _progressFuture = _firestoreService.getProgressSummary(_currentUser.uid);
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Catatan berhasil disimpan!'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan data: $e'), backgroundColor: Theme.of(context).colorScheme.error),
-        );
-      }
-    }
+  /// Refreshes the progress summary data.
+  void _refreshProgress() {
+    setState(() {
+      _progressFuture = _firestoreService.getProgressSummary(_currentUser.uid);
+    });
   }
 
   @override
@@ -105,8 +58,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Murojaah Tracker'),
+        title: const Text('Dashboard Progres'),
         actions: [
+          // Refresh button to update the progress summary manually.
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshProgress,
+            tooltip: 'Perbarui Progres',
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen())),
@@ -125,7 +84,6 @@ class _HomeScreenState extends State<HomeScreen> {
           if (dateSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           final userCreationDate = dateSnapshot.data;
 
           return StreamBuilder<Map<DateTime, MurojaahRecord>>(
@@ -139,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
               
               final records = snapshot.data ?? {};
-              return _buildContent(records, userCreationDate);
+              return _buildDashboardContent(records, userCreationDate);
             },
           );
         },
@@ -147,11 +105,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildContent(Map<DateTime, MurojaahRecord> records, DateTime? userCreationDate) {
-    final normalizedSelectedDay = _selectedDay != null ? DateTime.utc(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day) : null;
-    _selectedRecord = records[normalizedSelectedDay];
-    _noteController.text = _selectedRecord?.note ?? '';
-
+  /// Builds the main content of the dashboard.
+  Widget _buildDashboardContent(Map<DateTime, MurojaahRecord> records, DateTime? userCreationDate) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -161,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 16),
           _buildCalendar(records, userCreationDate),
           const SizedBox(height: 24),
-          _buildDailyChecklist(),
+          // Daily checklist is now moved to JournalScreen.
         ],
       ),
     );
@@ -176,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError || !snapshot.hasData) {
-          return const SizedBox.shrink();
+          return const SizedBox.shrink(); // Don't show if there's an error.
         }
 
         final summary = snapshot.data!;
@@ -208,18 +163,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Builds the interactive calendar heatmap.
   Widget _buildCalendar(Map<DateTime, MurojaahRecord> records, DateTime? userCreationDate) {
     return Card(
       elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar<MurojaahRecord>(
-          firstDay: DateTime.utc(2020, 1, 1),
-          lastDay: DateTime.utc(2030, 12, 31),
+          firstDay: userCreationDate ?? DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.now().add(const Duration(days: 365)), // Look one year into the future
           focusedDay: _focusedDay,
           calendarFormat: _calendarFormat,
-          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          onDaySelected: _onDaySelected,
+          // We don't need a selected day on the dashboard, it's just for view.
+          selectedDayPredicate: (day) => false, 
           onFormatChanged: (format) {
             if (_calendarFormat != format) {
               setState(() {
@@ -237,15 +193,16 @@ class _HomeScreenState extends State<HomeScreen> {
               final today = DateTime.utc(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
               BoxDecoration? decoration;
-              if (record?.completed == true) {
-                // Completed day - Green circle
-                decoration = BoxDecoration(color: Colors.green.withOpacity(0.5), shape: BoxShape.circle);
+              // Use the `isCompleted` getter from the new model.
+              if (record?.isCompleted == true) {
+                // Completed day: Green circle
+                decoration = BoxDecoration(color: Colors.green.withOpacity(0.6), shape: BoxShape.circle);
               } else if (userCreationDate != null &&
                          normalizedDay.isBefore(today) &&
                          normalizedDay.isAfter(userCreationDate.subtract(const Duration(days: 1))) &&
                          !records.containsKey(normalizedDay)) {
-                // Missed day - Red circle
-                decoration = BoxDecoration(color: Colors.red.withOpacity(0.4), shape: BoxShape.circle);
+                // Missed day: Grey circle (as requested)
+                decoration = BoxDecoration(color: Colors.grey.withOpacity(0.4), shape: BoxShape.circle);
               }
 
               return Container(
@@ -254,17 +211,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Center(
                   child: Text(
                     '${day.day}',
-                    style: const TextStyle().copyWith(color: Colors.black),
+                    // Adjust text color for better contrast if needed.
+                    style: const TextStyle().copyWith(color: Colors.black87),
                   ),
                 ),
               );
             },
           ),
           calendarStyle: CalendarStyle(
+            // Style for today's date marker.
             todayDecoration: BoxDecoration(
               color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
               shape: BoxShape.circle,
             ),
+            // Selected decoration is not used, but kept for reference.
             selectedDecoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primary,
               shape: BoxShape.circle,
@@ -282,69 +242,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildDailyChecklist() {
-     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _selectedDay != null
-              ? 'Catatan untuk ${DateFormat.yMMMMEEEEd('id_ID').format(_selectedDay!)}'
-              : 'Pilih tanggal untuk melihat catatan',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        if (_selectedDay != null)
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  CheckboxListTile(
-                    title: const Text('Sudah murojaah hari ini'),
-                    value: _selectedRecord?.completed ?? false,
-                    onChanged: (bool? value) {
-                      if (value == null) return;
-                      setState(() {
-                        _selectedRecord = _selectedRecord?.copyWith(completed: value) ??
-                            MurojaahRecord(
-                              date: _selectedDay!,
-                              completed: value,
-                              timestamp: Timestamp.now(),
-                              note: '',
-                            );
-                      });
-                    },
-                    controlAffinity: ListTileControlAffinity.leading,
-                    // FIX: Reverted to `activeColor` for older package versions
-                    activeColor: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _noteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Tambah catatan (opsional)',
-                      hintText: 'e.g. Surat Al-Baqarah, Ayat 1-50',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _saveMurojaahRecord,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: const Text('Simpan Catatan'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

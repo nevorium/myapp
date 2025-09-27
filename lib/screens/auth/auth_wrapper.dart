@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:myapp/screens/auth/login_screen.dart';
-import 'package:myapp/screens/home/home_screen.dart';
+import 'package:myapp/screens/main_screen.dart'; // Fixed: Import the new MainScreen
 import 'package:provider/provider.dart';
 
 /// # Authentication Wrapper
@@ -14,7 +14,7 @@ import 'package:provider/provider.dart';
 /// ## Connections:
 /// - **`main.dart`**: This widget consumes the `User` stream provided at the root.
 /// - **`LoginScreen`**: Navigates to this screen if the user is `null` (logged out).
-/// - **`HomeScreen`**: Navigates to this screen if a `User` object exists (logged in).
+/// - **`MainScreen`**: Navigates to this screen if a `User` object exists (logged in).
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -30,10 +30,10 @@ class AuthWrapper extends StatelessWidget {
     }
     
     // If the user object exists, the user is logged in.
-    // We provide the user object down to the HomeScreen.
+    // We provide the user object down to the MainScreen.
     return Provider<User>.value(
       value: user,
-      child: const HomeScreen(),
+      child: const MainScreen(), // Fixed: Use MainScreen instead of HomeScreen
     );
   }
 }

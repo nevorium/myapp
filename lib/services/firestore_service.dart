@@ -1,11 +1,9 @@
-import 'dart:math';
-
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:developer' as developer;
 
 import 'package:myapp/models/progress_summary.dart';
-
 import '../models/murojaah_record.dart';
 
 /// # Firestore Service
@@ -13,31 +11,34 @@ import '../models/murojaah_record.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // --- User Profile --- //
+
   /// ## Create User Profile
   /// Creates a new document in the 'users' collection when a user registers.
   Future<void> createUserProfile(User user) async {
     try {
-      await _db.collection('users').doc(user.uid).set({
-        'profile': {
-          'email': user.email,
-          'createdAt': FieldValue.serverTimestamp(),
-        },
-        'settings': {
-          'darkMode': false,
-          'notifEnabled': true,
+      final userDocRef = _db.collection('users').doc(user.uid);
+      await _db.runTransaction((transaction) async {
+        final userSnapshot = await transaction.get(userDocRef);
+        if (!userSnapshot.exists) {
+          transaction.set(userDocRef, {
+            'profile': {
+              'email': user.email,
+              'createdAt': FieldValue.serverTimestamp(),
+            },
+            'settings': {
+              'darkMode': false,
+              'notifEnabled': true,
+            }
+          });
         }
       });
     } catch (e, s) {
-      developer.log(
-        'Error creating user profile',
-        name: 'FirestoreService',
-        error: e,
-        stackTrace: s,
-      );
+      developer.log('Error creating user profile', name: 'FirestoreService', error: e, stackTrace: s);
       rethrow;
     }
   }
-  
+
   /// ## Get User Creation Date
   /// Fetches the creation timestamp of the user's profile.
   Future<DateTime?> getUserCreationDate(String userId) async {
@@ -55,13 +56,13 @@ class FirestoreService {
     }
   }
 
+  // --- Murojaah Records --- //
+
   /// ## Get Murojaah Records
   /// Retrieves a stream of murojaah records for a given user.
   Stream<Map<DateTime, MurojaahRecord>> getMurojaahRecords(String userId) {
     try {
-      final collectionRef =
-          _db.collection('users').doc(userId).collection('murojaahEntries');
-
+      final collectionRef = _db.collection('users').doc(userId).collection('murojaahEntries');
       return collectionRef.snapshots().map((snapshot) {
         final recordsMap = <DateTime, MurojaahRecord>{};
         for (var doc in snapshot.docs) {
@@ -76,7 +77,7 @@ class FirestoreService {
         return recordsMap;
       });
     } catch (e, s) {
-       developer.log('Error fetching murojaah records stream', name: 'FirestoreService', error: e, stackTrace: s);
+      developer.log('Error fetching murojaah records stream', name: 'FirestoreService', error: e, stackTrace: s);
       return Stream.value({});
     }
   }
@@ -85,9 +86,7 @@ class FirestoreService {
   /// Creates or updates a murojaah record for a specific date.
   Future<void> updateMurojaahRecord(String userId, MurojaahRecord record) async {
     try {
-      final docId =
-          '${record.date.year}-${record.date.month.toString().padLeft(2, '0')}-${record.date.day.toString().padLeft(2, '0')}';
-          
+      final docId = '${record.date.year}-${record.date.month.toString().padLeft(2, '0')}-${record.date.day.toString().padLeft(2, '0')}';
       await _db
           .collection('users')
           .doc(userId)
@@ -101,31 +100,31 @@ class FirestoreService {
   }
 
   /// ## Get Progress Summary
-  /// Calculates the user's current streak and weekly completion rate.
+  /// Calculates the user's current streak and weekly completion rate based on the new logic.
   Future<ProgressSummary> getProgressSummary(String userId) async {
     try {
       final snapshot = await _db.collection('users').doc(userId).collection('murojaahEntries').get();
-      
+
       final records = snapshot.docs.map((doc) {
         try {
           return MurojaahRecord.fromFirestore(doc);
         } catch (e) {
           return null;
         }
-      }).where((record) => record != null && record.completed).cast<MurojaahRecord>().toSet();
+      }).whereType<MurojaahRecord>().toSet();
+      
+      // Use the `isCompleted` getter from the model to determine completion.
+      final completedDates = records
+          .where((r) => r.isCompleted)
+          .map((r) => DateTime.utc(r.date.year, r.date.month, r.date.day))
+          .toSet();
 
-      if (records.isEmpty) {
+      if (completedDates.isEmpty) {
         return ProgressSummary(currentStreak: 0, weeklyCompletionRate: 0.0);
       }
 
-      final completedDates = records.map((r) => DateTime.utc(r.date.year, r.date.month, r.date.day)).toSet();
-
-      // --- Calculate Current Streak ---
       int currentStreak = 0;
-      DateTime today = DateTime.now();
-      DateTime todayUtc = DateTime.utc(today.year, today.month, today.day);
-
-      // Check if today is completed, if not, start from yesterday
+      DateTime todayUtc = DateTime.utc(DateTime.now().year, DateTime.now().month, DateTime.now().day);
       DateTime dateToCheck = completedDates.contains(todayUtc) ? todayUtc : todayUtc.subtract(const Duration(days: 1));
 
       while (completedDates.contains(dateToCheck)) {
@@ -133,7 +132,6 @@ class FirestoreService {
         dateToCheck = dateToCheck.subtract(const Duration(days: 1));
       }
 
-      // --- Calculate Weekly Completion Rate ---
       int completedInLast7Days = 0;
       for (int i = 0; i < 7; i++) {
         final date = todayUtc.subtract(Duration(days: i));
@@ -147,11 +145,57 @@ class FirestoreService {
         currentStreak: currentStreak,
         weeklyCompletionRate: weeklyRate,
       );
-
     } catch (e, s) {
       developer.log('Error calculating progress summary', name: 'FirestoreService', error: e, stackTrace: s);
-      // Return a default summary in case of error
       return ProgressSummary(currentStreak: 0, weeklyCompletionRate: 0.0);
+    }
+  }
+
+  // --- Custom Habits --- //
+
+  /// ## Get Custom Habits
+  /// Retrieves a stream of the user's custom habits.
+  Stream<List<String>> getCustomHabits(String userId) {
+    try {
+      final docRef = _db.collection('users').doc(userId).collection('habits').doc('userHabits');
+      return docRef.snapshots().map((snapshot) {
+        if (snapshot.exists && snapshot.data()!.containsKey('habitList')) {
+          final data = snapshot.data()!['habitList'];
+          // Ensure data is treated as a list of strings
+          return List<String>.from(data as List);
+        }
+        return [];
+      });
+    } catch (e, s) {
+      developer.log('Error fetching custom habits', name: 'FirestoreService', error: e, stackTrace: s);
+      return Stream.value([]);
+    }
+  }
+
+  /// ## Add Custom Habit
+  /// Adds a new habit to the user's list of custom habits.
+  Future<void> addCustomHabit(String userId, String habit) async {
+    if (habit.trim().isEmpty) return;
+    try {
+      await _db.collection('users').doc(userId).collection('habits').doc('userHabits').set({
+        'habitList': FieldValue.arrayUnion([habit.trim()])
+      }, SetOptions(merge: true));
+    } catch (e, s) {
+      developer.log('Error adding custom habit', name: 'FirestoreService', error: e, stackTrace: s);
+      rethrow;
+    }
+  }
+
+  /// ## Delete Custom Habit
+  /// Removes a habit from the user's list of custom habits.
+  Future<void> deleteCustomHabit(String userId, String habit) async {
+    try {
+      await _db.collection('users').doc(userId).collection('habits').doc('userHabits').update({
+        'habitList': FieldValue.arrayRemove([habit])
+      });
+    } catch (e, s) {
+      developer.log('Error deleting custom habit', name: 'FirestoreService', error: e, stackTrace: s);
+      rethrow;
     }
   }
 }
