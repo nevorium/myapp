@@ -3,7 +3,7 @@ import 'package:myapp/models/prayer_times.dart';
 import 'package:myapp/services/notification_service.dart';
 import 'package:myapp/services/prayer_time_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:developer' as developer;
+
 
 /// # Settings Screen
 /// Allows the user to enable or disable prayer time notifications.

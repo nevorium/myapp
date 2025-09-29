@@ -84,7 +84,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (dateSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final userCreationDate = dateSnapshot.data;
+          // **FIX:** Normalize the user creation date to UTC to ensure accurate comparisons.
+          DateTime? userCreationDateUtc;
+          if (dateSnapshot.hasData && dateSnapshot.data != null) {
+            final localDate = dateSnapshot.data!;
+            userCreationDateUtc = DateTime.utc(localDate.year, localDate.month, localDate.day);
+          }
 
           return StreamBuilder<Map<DateTime, MurojaahRecord>>(
             stream: _murojaahStream,
@@ -97,7 +102,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
               
               final records = snapshot.data ?? {};
-              return _buildDashboardContent(records, userCreationDate);
+              // Pass the normalized UTC date to the build method.
+              return _buildDashboardContent(records, userCreationDateUtc);
             },
           );
         },
@@ -116,7 +122,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           _buildCalendar(records, userCreationDate),
           const SizedBox(height: 24),
-          // Daily checklist is now moved to JournalScreen.
         ],
       ),
     );
@@ -171,10 +176,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.all(8.0),
         child: TableCalendar<MurojaahRecord>(
           firstDay: userCreationDate ?? DateTime.utc(2020, 1, 1),
-          lastDay: DateTime.now().add(const Duration(days: 365)), // Look one year into the future
+          lastDay: DateTime.now().add(const Duration(days: 365)),
           focusedDay: _focusedDay,
           calendarFormat: _calendarFormat,
-          // We don't need a selected day on the dashboard, it's just for view.
           selectedDayPredicate: (day) => false, 
           onFormatChanged: (format) {
             if (_calendarFormat != format) {
@@ -193,16 +197,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               final today = DateTime.utc(DateTime.now().year, DateTime.now().month, DateTime.now().day);
 
               BoxDecoration? decoration;
-              // Use the `isCompleted` getter from the new model.
               if (record?.isCompleted == true) {
-                // Completed day: Green circle
-                decoration = BoxDecoration(color: Colors.green.withOpacity(0.6), shape: BoxShape.circle);
-              } else if (userCreationDate != null &&
+                decoration = BoxDecoration(color: Colors.green.withOpacity(0.7), shape: BoxShape.circle);
+              } 
+              // **FIXED LOGIC**: Now compares UTC with UTC.
+              else if (userCreationDate != null &&
                          normalizedDay.isBefore(today) &&
-                         normalizedDay.isAfter(userCreationDate.subtract(const Duration(days: 1))) &&
+                         !normalizedDay.isBefore(userCreationDate) && // Simplified and more robust check
                          !records.containsKey(normalizedDay)) {
-                // Missed day: Grey circle (as requested)
-                decoration = BoxDecoration(color: Colors.grey.withOpacity(0.4), shape: BoxShape.circle);
+                decoration = BoxDecoration(color: Colors.grey.withOpacity(0.5), shape: BoxShape.circle);
               }
 
               return Container(
@@ -211,24 +214,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Center(
                   child: Text(
                     '${day.day}',
-                    // Adjust text color for better contrast if needed.
-                    style: const TextStyle().copyWith(color: Colors.black87),
+                    style: const TextStyle().copyWith(color: day.weekday > 6 ? Colors.red.shade400 : null),
                   ),
                 ),
               );
             },
+            todayBuilder: (context, day, focusedDay) {
+               return Container(
+                margin: const EdgeInsets.all(4.0),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+                ),
+                child: Center(child: Text('${day.day}')),
+              );
+            },
           ),
           calendarStyle: CalendarStyle(
-            // Style for today's date marker.
-            todayDecoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
-              shape: BoxShape.circle,
-            ),
-            // Selected decoration is not used, but kept for reference.
-            selectedDecoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-              shape: BoxShape.circle,
-            ),
+            outsideDaysVisible: false,
+            weekendTextStyle: TextStyle(color: Colors.red.shade600),
           ),
           headerStyle: HeaderStyle(
             titleCentered: true,
