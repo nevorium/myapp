@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:myapp/models/murojaah_record.dart';
 import 'package:myapp/models/progress_summary.dart';
+import 'package:myapp/screens/dashboard/widgets/daily_tracking_card.dart';
+import 'package:myapp/screens/dashboard/widgets/prayer_time_card.dart';
 import 'package:myapp/screens/settings/settings_screen.dart';
 import 'package:myapp/services/auth_service.dart';
 import 'package:myapp/services/firestore_service.dart';
@@ -118,6 +120,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const DailyTrackingCard(),
+          const SizedBox(height: 24),
+          const PrayerTimeCard(),
+          const SizedBox(height: 24),
           _buildProgressSummary(),
           const SizedBox(height: 16),
           _buildCalendar(records, userCreationDate),

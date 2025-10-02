@@ -61,7 +61,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _statusMessage = 'Mendapatkan lokasi dan jadwal sholat...';
       });
       
-      final PrayerTimes? prayerTimes = await _prayerTimeService.getPrayerTimes();
+      // TODO: Replace with actual city ID from user's location
+      const String cityId = '1301'; // Example: Jakarta
+      final DateTime date = DateTime.now();
+      final PrayerTimes? prayerTimes = await _prayerTimeService.getPrayerTimes(cityId, date);
       
       if (prayerTimes != null) {
         await _notificationService.schedulePrayerTimeNotifications(prayerTimes);

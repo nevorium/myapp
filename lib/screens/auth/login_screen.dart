@@ -54,10 +54,12 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // Stop the loading indicator.
-      setState(() {
-        _isLoading = false;
-      });
+      // Stop the loading indicator only if the widget is still mounted.
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
 
       // If there was an error, show it in a SnackBar.
       if (error != null && mounted) {
