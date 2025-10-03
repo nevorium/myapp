@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
-
-// A data model for the chat messages
-class ChatMessage {
-  final String text;
-  final bool isUser;
-
-  ChatMessage({required this.text, required this.isUser});
-}
+import 'package:myapp/models/chat_message.dart' as chat_model;
+import 'package:myapp/services/ai_service.dart';
+import 'package:myapp/services/database_service.dart';
 
 class AiScreen extends StatefulWidget {
   const AiScreen({super.key});
@@ -17,17 +12,51 @@ class AiScreen extends StatefulWidget {
 
 class _AiScreenState extends State<AiScreen> {
   final TextEditingController _controller = TextEditingController();
-  final List<ChatMessage> _messages = [];
+  late final AiService _aiService;
+  final DatabaseService _dbService = DatabaseService();
+  List<chat_model.ChatMessage> _messages = [];
+  bool _isLoading = false;
 
-  void _sendMessage() {
+  @override
+  void initState() {
+    super.initState();
+    // IMPORTANT: Replace with your actual Gemini API key
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'AIzaSyAlzjS2XqjiXzoCDBmTgMq0oR55-hxLU5I');
+    _aiService = AiService(apiKey);
+    _loadMessages();
+  }
+
+  Future<void> _loadMessages() async {
+    final messages = await _dbService.getChatHistory();
+    setState(() {
+      _messages = messages;
+    });
+  }
+
+  Future<void> _sendMessage() async {
     if (_controller.text.isNotEmpty) {
-      setState(() {
-        _messages.add(ChatMessage(text: _controller.text, isUser: true));
-        // Simulate AI response
-        _messages.add(ChatMessage(
-            text: 'Ini adalah respons dari AI.', isUser: false));
-      });
+      final text = _controller.text;
       _controller.clear();
+
+      setState(() {
+        _messages.add(chat_model.ChatMessage(
+          text: text,
+          isUser: true,
+          timestamp: DateTime.now(),
+        ));
+        _isLoading = true;
+      });
+
+      final aiResponse = await _aiService.sendMessage(text);
+
+      setState(() {
+        _messages.add(chat_model.ChatMessage(
+          text: aiResponse,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _isLoading = false;
+      });
     }
   }
 
@@ -36,6 +65,15 @@ class _AiScreenState extends State<AiScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('AI Assistant'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () async {
+              await _aiService.clearChatHistory();
+              _loadMessages();
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -69,6 +107,11 @@ class _AiScreenState extends State<AiScreen> {
               },
             ),
           ),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: CircularProgressIndicator(),
+            ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(

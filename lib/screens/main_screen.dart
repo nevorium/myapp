@@ -4,6 +4,7 @@ import 'package:myapp/screens/analysis/analysis_screen.dart';
 import 'package:myapp/screens/dashboard/dashboard_screen.dart';
 import 'package:myapp/screens/journal/journal_screen.dart';
 import 'package:myapp/screens/leaderboard/leaderboard_screen.dart';
+import 'package:myapp/screens/profile/profile_screen.dart';
 
 /// # Main Screen
 /// This is the main stateful widget that acts as the root of the application
@@ -22,6 +23,7 @@ class _MainScreenState extends State<MainScreen> {
 
   // A list of the pages that will be displayed for each tab.
   static const List<Widget> _widgetOptions = <Widget>[
+    ProfileScreen(),
     DashboardScreen(),
     AnalysisScreen(),
     LeaderboardScreen(),
@@ -46,6 +48,10 @@ class _MainScreenState extends State<MainScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_rounded),
             label: 'Dashboard',

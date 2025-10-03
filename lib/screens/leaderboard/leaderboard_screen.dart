@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
-
-// A data model for the user leaderboard entry
-class UserLeaderboardEntry {
-  final String name;
-  final int xp;
-  final String avatarUrl;
-
-  UserLeaderboardEntry(
-      {required this.name, required this.xp, required this.avatarUrl});
-}
+import 'package:myapp/models/user_profile.dart';
+import 'package:myapp/screens/profile/profile_screen.dart';
+import 'package:myapp/services/firestore_service.dart';
+import 'package:provider/provider.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -20,25 +14,7 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  // Sample data
-  final List<UserLeaderboardEntry> _weeklyLeaderboard = [
-    UserLeaderboardEntry(
-        name: 'Ali', xp: 1500, avatarUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704d'),
-    UserLeaderboardEntry(
-        name: 'Aisyah', xp: 1200, avatarUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704e'),
-    UserLeaderboardEntry(
-        name: 'Umar', xp: 1000, avatarUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704f'),
-  ];
-
-  final List<UserLeaderboardEntry> _allTimeLeaderboard = [
-    UserLeaderboardEntry(
-        name: 'Khadijah', xp: 25000, avatarUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704a'),
-    UserLeaderboardEntry(
-        name: 'Abu Bakar', xp: 22000, avatarUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704b'),
-    UserLeaderboardEntry(
-        name: 'Usman', xp: 20000, avatarUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026704c'),
-  ];
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -65,27 +41,62 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildLeaderboardList(_weeklyLeaderboard),
-          _buildLeaderboardList(_allTimeLeaderboard),
-        ],
+      body: StreamProvider<List<UserProfile>>.value(
+        value: _firestoreService.getAllUserProfiles(),
+        initialData: const [],
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildLeaderboardList(isWeekly: true),
+            _buildLeaderboardList(isWeekly: false),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildLeaderboardList(List<UserLeaderboardEntry> leaderboard) {
-    return ListView.builder(
-      itemCount: leaderboard.length,
-      itemBuilder: (context, index) {
-        final user = leaderboard[index];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundImage: NetworkImage(user.avatarUrl),
-          ),
-          title: Text(user.name),
-          trailing: Text('${user.xp} XP'),
+  Widget _buildLeaderboardList({required bool isWeekly}) {
+    return Consumer<List<UserProfile>>(
+      builder: (context, userProfiles, child) {
+        if (userProfiles.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Sort users by XP
+        userProfiles.sort((a, b) => b.xp.compareTo(a.xp));
+
+        return ListView.builder(
+          itemCount: userProfiles.length,
+          itemBuilder: (context, index) {
+            final user = userProfiles[index];
+            return ListTile(
+              leading: CircleAvatar(
+                backgroundImage: user.avatarUrlSmall != null
+                    ? NetworkImage(user.avatarUrlSmall!)
+                    : null,
+                child: user.avatarUrlSmall == null
+                    ? const Icon(Icons.person)
+                    : null,
+              ),
+              title: Text(user.name ?? 'Anonymous'),
+              subtitle: Text('${user.xp} XP'),
+              trailing: Text(
+                '#${index + 1}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfileScreen(), // TODO: Pass user id to view other profiles
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:developer' as developer;
 
 import 'package:myapp/models/progress_summary.dart';
+import 'package:myapp/models/user_profile.dart';
 import '../models/murojaah_record.dart';
 
 /// # Firestore Service
@@ -36,6 +37,29 @@ class FirestoreService {
     } catch (e, s) {
       developer.log('Error creating user profile', name: 'FirestoreService', error: e, stackTrace: s);
       rethrow;
+    }
+  }
+
+  /// ## Get All User Profiles
+  /// Fetches all user profiles from the 'users' collection.
+  Stream<List<UserProfile>> getAllUserProfiles() {
+    try {
+      return _db.collection('users').snapshots().map((snapshot) {
+        return snapshot.docs.map((doc) {
+          final data = doc.data();
+          return UserProfile(
+            uid: doc.id,
+            name: data['profile']?['name'],
+            email: data['profile']?['email'],
+            xp: data['leaderboard']?['xp'] ?? 0,
+            avatarUrlSmall: data['profile']?['avatarUrlSmall'],
+            avatarUrlFull: data['profile']?['avatarUrlFull'],
+          );
+        }).toList();
+      });
+    } catch (e, s) {
+      developer.log('Error fetching all user profiles', name: 'FirestoreService', error: e, stackTrace: s);
+      return Stream.value([]);
     }
   }
 

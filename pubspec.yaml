@@ -28,8 +28,15 @@ dependencies:
   geocoding: ^4.0.0
   location: ^8.0.1
   fl_chart: ^0.68.0
+  google_generative_ai: ^0.4.3
+  image_picker: ^1.1.2
+  cloudinary_public: ^0.23.1
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
 
 dev_dependencies:
+  isar_generator: ^3.1.0+1
+  build_runner: ^2.4.11
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
