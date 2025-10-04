@@ -1,65 +1,57 @@
-import 'package:isar/isar.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:myapp/models/chat_message.dart';
 import 'package:myapp/models/user_profile.dart';
-import 'package:path_provider/path_provider.dart';
+
 
 class DatabaseService {
-  static final DatabaseService _instance = DatabaseService._internal();
-  late Future<Isar> db;
+  static const String _userProfileBoxName = 'userProfile';
+  static const String _chatMessageBoxName = 'chatMessages';
 
-  factory DatabaseService() {
-    return _instance;
-  }
+  static Future<void> init() async {
+    await Hive.initFlutter();
+    Hive.registerAdapter(UserProfileAdapter());
+    Hive.registerAdapter(ChatMessageAdapter());
 
-  DatabaseService._internal() {
-    db = _init();
-  }
-
-  Future<Isar> _init() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return Isar.open(
-      [UserProfileSchema, ChatMessageSchema],
-      directory: dir.path,
-    );
+    await Hive.openBox<UserProfile>(_userProfileBoxName);
+    await Hive.openBox<ChatMessage>(_chatMessageBoxName);
   }
 
   Future<void> saveUserProfile(UserProfile userProfile) async {
-    final isar = await db;
-    await isar.writeTxn(() async {
-      await isar.userProfiles.put(userProfile);
-    });
+    final box = Hive.box<UserProfile>(_userProfileBoxName);
+    // In a key-value store like Hive, we need a consistent key.
+    // The UID is perfect for this.
+    await box.put(userProfile.uid, userProfile);
   }
 
   Future<UserProfile?> getUserProfile(String uid) async {
-    final isar = await db;
-    return await isar.userProfiles.where().uidEqualTo(uid).findFirst();
+    final box = Hive.box<UserProfile>(_userProfileBoxName);
+    return box.get(uid);
   }
 
   // --- Chat Messages --- //
 
   Future<void> saveChatMessage(ChatMessage message) async {
-    final isar = await db;
-    await isar.writeTxn(() async {
-      await isar.chatMessages.put(message);
-    });
+    final box = Hive.box<ChatMessage>(_chatMessageBoxName);
+    await box.add(message);
   }
 
   Future<List<ChatMessage>> getChatHistory() async {
-    final isar = await db;
-    return await isar.chatMessages.where().sortByTimestamp().findAll();
+    final box = Hive.box<ChatMessage>(_chatMessageBoxName);
+    final messages = box.values.toList();
+    messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return messages;
   }
 
   Future<void> deleteChatHistory() async {
-    final isar = await db;
-    await isar.writeTxn(() async {
-      await isar.chatMessages.clear();
-    });
+    final box = Hive.box<ChatMessage>(_chatMessageBoxName);
+    await box.clear();
   }
 
-  Future<void> deleteSingleChatMessage(int id) async {
-    final isar = await db;
-    await isar.writeTxn(() async {
-      await isar.chatMessages.delete(id);
-    });
+  // Note: Deleting a single message in Hive is typically done by key.
+  // Since we use auto-incrementing keys with .add(), we'd need to find the key first.
+  // For simplicity, we'll stick to clearing the whole history as requested.
+  Future<void> deleteSingleChatMessage(dynamic key) async {
+    final box = Hive.box<ChatMessage>(_chatMessageBoxName);
+    await box.delete(key);
   }
 }

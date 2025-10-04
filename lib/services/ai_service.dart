@@ -1,9 +1,11 @@
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:myapp/models/chat_message.dart';
 import 'package:myapp/services/database_service.dart';
+import 'package:myapp/services/firestore_service.dart';
 
 class AiService {
   final DatabaseService _dbService = DatabaseService();
+  final FirestoreService _firestoreService = FirestoreService();
   final GenerativeModel _model;
   ChatSession? _chat;
 
@@ -38,6 +40,8 @@ class AiService {
       timestamp: DateTime.now(),
     );
     await _dbService.saveChatMessage(userMessage);
+    // Also save to Firestore for logging, but don't wait for it
+    _firestoreService.saveChatMessage(userMessage);
 
     final response = await chat.sendMessage(Content.text(text));
     final aiResponseText = response.text ?? 'Maaf, saya tidak mengerti.';
@@ -48,6 +52,8 @@ class AiService {
       timestamp: DateTime.now(),
     );
     await _dbService.saveChatMessage(aiMessage);
+    // Also save to Firestore for logging, but don't wait for it
+    _firestoreService.saveChatMessage(aiMessage);
 
     return aiResponseText;
   }

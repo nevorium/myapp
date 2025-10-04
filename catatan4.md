@@ -1,0 +1,1 @@
+sek sek sek, ngga jadi, bisa balik ke sebelum kita implementasi ai gemini feature nya? revert ke situ untuk semuanya termasuk build gradle nya juga

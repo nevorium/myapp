@@ -8,7 +8,7 @@ val flutterVersionCode: String? by project
 val flutterVersionName: String? by project
 
 android {
-    namespace = "com.example.myapp"
+    namespace = "com.nevoriums.mtb_izam"
     // Reverted compileSdk to a stable version compatible with the desugar library
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.myapp"
+        applicationId = "com.nevoriums.mtb_izam"
         minSdk = flutter.minSdkVersion
         // The targetSdk should match the compileSdk.
         targetSdk = 36
@@ -48,7 +48,7 @@ android {
 
 dependencies {
     // Reverted to a known, available version of the desugaring library.
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.2.2")
 }
 
 flutter {

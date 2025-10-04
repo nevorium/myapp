@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:developer' as developer;
 
+import 'package:myapp/models/chat_message.dart';
 import 'package:myapp/models/progress_summary.dart';
 import 'package:myapp/models/user_profile.dart';
 import '../models/murojaah_record.dart';
@@ -220,6 +221,30 @@ class FirestoreService {
     } catch (e, s) {
       developer.log('Error deleting custom habit', name: 'FirestoreService', error: e, stackTrace: s);
       rethrow;
+    }
+  }
+
+  // --- Chat History --- //
+
+  /// ## Save Chat Message
+  /// Saves a chat message to the user's chat history collection for logging.
+  Future<void> saveChatMessage(ChatMessage message) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return; // Not logged in, cannot save
+
+    try {
+      await _db
+          .collection('users')
+          .doc(user.uid)
+          .collection('chatHistory')
+          .add({
+        'text': message.text,
+        'isUser': message.isUser,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e, s) {
+      developer.log('Error saving chat message to Firestore', name: 'FirestoreService', error: e, stackTrace: s);
+      // We don't rethrow here because this is a non-critical logging operation
     }
   }
 }

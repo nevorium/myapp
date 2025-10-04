@@ -1,20 +1,26 @@
-import 'package:isar/isar.dart';
+import 'package:hive/hive.dart';
 
 part 'user_profile.g.dart';
 
-@Collection()
-class UserProfile {
-  Id id = Isar.autoIncrement;
-
-  @Index(unique: true, replace: true)
+@HiveType(typeId: 1)
+class UserProfile extends HiveObject {
+  @HiveField(0)
   String uid;
 
+  @HiveField(1)
   String? name;
+
+  @HiveField(2)
   String? email;
+
+  @HiveField(3)
   int xp;
 
-  String? avatarUrlSmall; // 64x64
-  String? avatarUrlFull; // 256x256
+  @HiveField(4)
+  String? avatarUrlSmall;
+
+  @HiveField(5)
+  String? avatarUrlFull;
 
   UserProfile({
     required this.uid,
