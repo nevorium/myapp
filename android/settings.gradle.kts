@@ -26,21 +26,4 @@ plugins {
 
 include(":app")
 
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-    repositories {
-        google()
-        mavenCentral()
-        maven {
-            val flutterSdkPath =
-                run {
-                    val properties = java.util.Properties()
-                    file("local.properties").inputStream().use { properties.load(it) }
-                    val flutterSdkPath = properties.getProperty("flutter.sdk")
-                    require(flutterSdkPath != null) { "flutter.sdk not set in local.properties" }
-                    flutterSdkPath
-                }
-            url = File(flutterSdkPath, "packages/flutter_tools/gradle/flutter_build_local_repo").toURI()
-        }
-    }
-}
+
