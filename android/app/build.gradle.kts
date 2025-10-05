@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.nevoriums.mtb_izam"
+        applicationId = "com.example.myapp"
         minSdk = flutter.minSdkVersion
         // The targetSdk should match the compileSdk.
         targetSdk = 36
